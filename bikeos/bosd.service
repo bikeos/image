@@ -1,0 +1,6 @@
+[Unit]
+Description=BikeOS WLAN service
+After=syslog.target
+
+[Service]
+ExecStart=

@@ -1,0 +1,7 @@
+tmpfs /tmp tmpfs defaults 0 0
+
+# sda1 mark as ro to test pure appliance operation
+/dev/sda1 / ext4 rw,noatime 0 1
+/dev/sda2 /var ext4 rw,noatime 0 2
+/dev/sda3 /media/sdcard nilfs2 rw,noatime 0 2
+

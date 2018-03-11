@@ -1,0 +1,11 @@
+[Unit]
+Description=GPS time configuration
+After=syslog.target
+
+[Service]
+ExecStart=/usr/sbin/bosd gps-sync
+Type=oneshot
+RemainAfterExit=no
+
+[Install]
+RequiredBy=time-sync.target
