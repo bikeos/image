@@ -5,7 +5,10 @@ VOLAPTCACHE=volumes/apt-cache
 .PHONY: vm
 vm: $(VOLVM)/vm.img
 
-$(VOLVM)/vm.img:
+bikeos/bin/bosd-amd64:
+	go build -o $@ github.com/bikeos/bosd/cmd/bosd
+
+$(VOLVM)/vm.img: bikeos/bin/bosd-amd64 plat/vm/vm.yaml
 	mkdir -p $(VOLVM)
 	rm -f $(VOLVM)/vm.img.tmp
 	touch $(VOLVM)/vm.img.tmp
@@ -74,10 +77,18 @@ binfmts:
 
 
 # TODO: ncurses/console mode
-# auto-detects some usb-peripherals
-QEMUCMD=qemu-system-x86_64 -enable-kvm -net user,vlan=0 -net nic
+# auto-detects some usb-peripherals, overrides clock for gps testing
+# -net user,vlan=0 -net nic
+QEMUCMD=qemu-system-x86_64 -enable-kvm -rtc base=2100-01-01,clock=vm -net none
 .PHONY: qemu-vm
 qemu-vm: vm
 	$(QEMUCMD)	-hda $(VOLVM)/vm.img -smp 2 -m 512 \
 			-usb -device usb-ehci,id=ehci \
-	 		$(shell lsusb | egrep "(ASIX|Ralink|Realtek|IMC)" | cut -f1 -d: | awk '{ print "-device usb-host,hostbus="$$2",hostaddr="$$4",bus=ehci.0" } ' | sed 's/=0*/=/g')
+			$(shell lsusb | egrep "(Ralink|Realtek|IMC)" | \
+					cut -f1 -d: | \
+					awk '{ print "-device usb-host,hostbus="$$2",hostaddr="$$4",bus=ehci.0" } ' | \
+					sed 's/=0*/=/g') \
+			$(shell lsusb | egrep "(U-Blox)" | \
+					cut -f1 -d: | \
+					awk '{ print "-device usb-host,hostbus="$$2",hostaddr="$$4",bus=usb-bus.0" } ' | \
+					sed 's/=0*/=/g')

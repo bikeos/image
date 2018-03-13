@@ -1,11 +1,11 @@
 [Unit]
-Description=GPS time configuration
+Description=BikeOS GPS time synchronization
 After=syslog.target
 
 [Service]
-ExecStart=/usr/sbin/bosd gps-sync
+ExecStart=/usr/sbin/bosd gps date --set
 Type=oneshot
 RemainAfterExit=no
 
 [Install]
-RequiredBy=time-sync.target
+WantedBy=time-sync.target

@@ -52,15 +52,30 @@ steps:
     packages:
     - linux-image-amd64
     - nilfs-tools
-    - hostapd
     - dhcpcd5
     - tcpdump
     - wireless-tools
     - wpasupplicant
-    - festival
     - usbutils
     - nano
     - systemd
+    - iputils-ping
+    - net-tools
+    - curl
+    fs-tag: root-fs
+    unless: rootfs_unpacked
+
+  - chroot: root-fs
+    shell: |
+      echo 'deb http://localhost:3142/debian buster main contrib non-free' > /etc/apt/sources.list
+      apt-get update
+    unless: rootfs_unpacked
+
+  # needs apt-get update to fetch these
+  - apt: install
+    packages:
+    - firmware-atheros
+    - firmware-misc-nonfree
     fs-tag: root-fs
     unless: rootfs_unpacked
 
@@ -75,26 +90,20 @@ steps:
       # configure filesystems
       mkdir -p "${ROOT?}/media/sdcard"
       install -m 644 -o root -g root /spec/fstab "${ROOT?}/etc/fstab"
+      install -m 755 -o root -g root /bikeos/bin/bosd-amd64 "${ROOT?}/usr/sbin/bosd"
       # alert bosd on wlan changes
       install -m 644 -o root -g root /bikeos/95-wlan.rules "${ROOT?}/etc/udev/rules.d"
       # install -m 644 -o root -g root /bikeos/bosd.service "${ROOT?}/etc/systemd/system"
       mkdir -p "${ROOT?}/etc/iptables"
       install -m 644 -o root -g root /spec/rules.v4 "${ROOT?}/etc/iptables/rules.v4"
       install -m 644 -o root -g root /spec/rules.v6 "${ROOT?}/etc/iptables/rules.v6"
-
+      # time stuff
+      install -m 644 -o root -g root /bikeos/gps-time.service "${ROOT?}/etc/systemd/system"
+      mkdir -p "${ROOT?}/var/lib/systemd/timesync"
+      touch "${ROOT?}/var/lib/systemd/timesync/clock"
+      chown root:root "${ROOT?}/var/lib/systemd/timesync/clock"
+      # sed -i 's/#NTP=/NTP=localhost' "${ROOT?}/etc/system/timesyncd.conf"
     root-fs: root-fs
-
-  - chroot: root-fs
-    shell: |
-      echo 'deb http://localhost:3142/debian buster main contrib non-free' > /etc/apt/sources.list
-      apt-get update
-
-  # needs apt-get update to fetch these
-  - apt: install
-    packages:
-    - firmware-atheros
-    - firmware-misc-nonfree
-    fs-tag: root-fs
 
   - grub: bios
     root-fs: root-fs
@@ -104,8 +113,13 @@ steps:
       GRUB_DISABLE_RECOVERY=true
     cmdline: 'init=/lib/systemd/systemd'
 
-  - shell: |
+  - chroot: root-fs
+    shell: |
       apt list grub\* | grep installed | cut -f1 -d'/' | xargs apt remove -y
-      rm "${ROOT?}/etc/resolv.conf"
-      sed -i "s/\/dev\/mapper\/loop[0-9p]*/\/dev\/sda1/g"  "${ROOT?}/boot/grub/grub.cfg"
-    root-fs: root-fs
+      apt remove -y cgmanager
+      apt autoremove -y
+      rm /etc/resolv.conf
+      sed -i "s/\/dev\/mapper\/loop[0-9p]*/\/dev\/sda1/g"  /boot/grub/grub.cfg
+      systemctl enable gps-time
+      systemctl disable apt-daily.timer
+      systemctl disable apt-daily.upgrade.timer
