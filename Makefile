@@ -79,7 +79,7 @@ binfmts:
 # TODO: ncurses/console mode
 # auto-detects some usb-peripherals, overrides clock for gps testing
 # -net user,vlan=0 -net nic
-QEMUCMD=qemu-system-x86_64 -enable-kvm -rtc base=2100-01-01,clock=vm -net none
+QEMUCMD=qemu-system-x86_64 -enable-kvm -rtc base=1990-01-01,clock=vm -net none
 .PHONY: qemu-vm
 qemu-vm: vm
 	$(QEMUCMD)	-hda $(VOLVM)/vm.img -smp 2 -m 512 \

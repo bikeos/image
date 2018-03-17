@@ -1,6 +1,9 @@
 [Unit]
-Description=BikeOS WLAN service
-After=syslog.target
+Description=BikeOS daemon service
+After=local-fs.target time-sync.target
 
 [Service]
-ExecStart=
+ExecStart=/usr/sbin/bosd daemon
+
+[Install]
+WantedBy=multi-user.target

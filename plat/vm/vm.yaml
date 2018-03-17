@@ -97,6 +97,8 @@ steps:
       mkdir -p "${ROOT?}/etc/iptables"
       install -m 644 -o root -g root /spec/rules.v4 "${ROOT?}/etc/iptables/rules.v4"
       install -m 644 -o root -g root /spec/rules.v6 "${ROOT?}/etc/iptables/rules.v6"
+      # daemon
+      install -m 644 -o root -g root /bikeos/bosd.service "${ROOT?}/etc/systemd/system"
       # time stuff
       install -m 644 -o root -g root /bikeos/gps-time.service "${ROOT?}/etc/systemd/system"
       mkdir -p "${ROOT?}/var/lib/systemd/timesync"
@@ -121,5 +123,6 @@ steps:
       rm /etc/resolv.conf
       sed -i "s/\/dev\/mapper\/loop[0-9p]*/\/dev\/sda1/g"  /boot/grub/grub.cfg
       systemctl enable gps-time
+      systemctl enable bosd
       systemctl disable apt-daily.timer
       systemctl disable apt-daily.upgrade.timer
