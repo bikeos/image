@@ -99,6 +99,7 @@ steps:
       install -m 644 -o root -g root /spec/rules.v6 "${ROOT?}/etc/iptables/rules.v6"
       # daemon
       install -m 644 -o root -g root /bikeos/bosd.service "${ROOT?}/etc/systemd/system"
+      install -m 644 -o root -g root /bikeos/etc/apparmor.d/local/usr.sbin.tcpdump "${ROOT?}/etc/apparmor.d/local/usr.sbin.tcpdump"
       # time stuff
       install -m 644 -o root -g root /bikeos/gps-time.service "${ROOT?}/etc/systemd/system"
       mkdir -p "${ROOT?}/var/lib/systemd/timesync"
