@@ -25,9 +25,9 @@ make apt-cache
 
 Cache statistics are available through a web interface on `http://localhost:3142/acng-report.html`.
 
-### VM image
+### Image
 
-Create an image in `volumes/vm/vm.img`:
+To create the image `volumes/vm/vm.img` (or `rpi3`, instead of `vm`, for a raspberrypi build):
 
 ```sh
 make vm
@@ -39,6 +39,8 @@ A cache of the rootfs is kept in `/tmp/vm.tar.gz` for fast rebuilds.
 
 ## Run the OS
 
+### Inside a VM
+
 Launch the VM image with qemu. It will auto-detect USB wifi devices for pass-through:
 
 ```sh
@@ -46,3 +48,14 @@ make qemu-vm
 ```
 
 Log in with user `root`, password `bicycle`.
+
+### On a RaspberryPI 3
+
+Format the system microsd card (>2GB) and the data sd card:
+
+```sh
+dd if=volumes/vm/rpi3.img of=/dev/<system-sdcard> bs=4M
+mkfs.nilfs2 /dev/<data-sdcard>1
+```
+
+Install the system card in the microsd card slot. Attach the data card through a USB card reader.

@@ -8,6 +8,9 @@ vm: $(VOLVM)/vm.img
 bikeos/bin/bosd-amd64:
 	go build -o $@ github.com/bikeos/bosd/cmd/bosd
 
+bikeos/bin/bosd-arm64:
+	GOARCH=arm64 go build -o $@ github.com/bikeos/bosd/cmd/bosd
+
 $(VOLVM)/vm.img: bikeos/bin/bosd-amd64 plat/vm/vm.yaml
 	mkdir -p $(VOLVM)
 	rm -f $(VOLVM)/vm.img.tmp
@@ -31,20 +34,30 @@ $(VOLVM)/vm.img: bikeos/bin/bosd-amd64 plat/vm/vm.yaml
 		--rootfs-tarball /tmp/vm.tar.gz"
 	mv $(VOLVM)/vm.img.tmp $(VOLVM)/vm.img
 
-$(VOLRPI3)/rpi3.img:
+.PHONY: rpi3
+rpi3: $(VOLRPI3)/rpi3.img
+
+$(VOLRPI3)/rpi3.img:bikeos/bin/bosd-arm64 plat/rpi3/rpi3.yaml
 	mkdir -p $(VOLRPI3)
+	rm -f $(VOLRPI3)/rpi3.img.tmp
+	touch $(VOLRPI3)/rpi3.img.tmp
 	docker run --rm -i -t --privileged \
+		--net host \
 		-v /dev:/dev \
 		-v /dev/mapper:/dev/mapper \
 		-v /tmp:/tmp \
-		-v `pwd`/$(VOLRPI3):/$(VOLRPI3) -v `pwd`/plat/rpi3:/spec	\
+		-v `pwd`/$(VOLRPI3):/$(VOLRPI3) \
+		-v `pwd`/plat/rpi3:/spec	\
+		-v `pwd`/bikeos:/bikeos \
 		-w /$(VOLRPI3) \
 		bikeos:vmdb2 \
 		/vmdb2/vmdb2 \
-		/spec/raspi3.yaml \
+		/spec/rpi3.yaml \
 		--verbose \
-		--output rpi3.img \
-		--log rpi3.log
+		--output rpi3.img.tmp \
+		--log rpi3.log \
+		--rootfs-tarball /tmp/rpi3.tar.gz
+	mv $(VOLRPI3)/rpi3.img.tmp $(VOLRPI3)/rpi3.img
 
 .PHONY: clean-dev
 clean-dev:
