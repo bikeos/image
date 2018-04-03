@@ -71,7 +71,7 @@ apt-cache:
 		-v `pwd`/$(VOLAPTCACHE)/cache:/var/cache/apt-cacher-ng/ \
 		-v `pwd`/$(VOLAPTCACHE)/log:/var/log/apt-cacher-ng/ \
 		-u `id -u`:`id -u` \
-		-p 3142:3142 
+		-p 3142:3142 \
 		bikeos:apt-cache
 
 .PHONY: docker-apt-cache
@@ -81,6 +81,18 @@ docker-apt-cache:
 .PHONY: docker-vmdb2
 docker-vmdb2:
 	docker build -t bikeos:vmdb2 plat/
+
+.PHONY: build-kernel
+build-kernel:
+	docker run --rm -t -i \
+		-v `pwd`/linux:/linux  \
+		-u `id -u`:`id -u` \
+		bikeos:kernel /build.sh
+
+.PHONY: docker-kernel
+docker-kernel:
+	docker build --network=host -t bikeos:kernel kernel/
+
 
 .PHONY: binfmts
 binfmts:
