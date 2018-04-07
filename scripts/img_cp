@@ -1,0 +1,15 @@
+#!/bin/bash
+set -eou pipefail
+
+# Copy files from an image partition to an output directory.
+# img_cp <img-file> <part> <file-glob> <out-dir>
+
+loopdev=`sudo /sbin/losetup -f --show $1`
+sudo kpartx -a $loopdev
+name=`basename $loopdev`
+mkdir -p mnt/$name$2
+sudo mount /dev/mapper/${name}$2 mnt/$name$2
+cp mnt/$name$2/$3 $4/
+sudo umount mnt/$name$2
+sudo kpartx -d $loopdev
+sudo losetup -d $loopdev

@@ -1,6 +1,7 @@
 VOLRPI3=volumes/rpi3
 VOLVM=volumes/vm
 VOLAPTCACHE=volumes/apt-cache
+VOLTFTP=volumes/tftp
 
 .PHONY: vm
 vm: $(VOLVM)/vm.img
@@ -77,6 +78,24 @@ apt-cache:
 .PHONY: docker-apt-cache
 docker-apt-cache:
 	docker build -t bikeos:apt-cache cache/
+
+
+$(VOLTFTP)/tftpboot: $(VOLRPI3)/rpi3.img
+	mkdir -p $@
+	scripts/img_cp $(VOLRPI3)/rpi3.img  p1 "*" $@
+
+.PHONY: pxe
+pxe: $(VOLTFTP)/tftpboot
+	docker run --privileged --rm -i -t --net host \
+		-v `pwd`/$(VOLTFTP)/tftpboot:/var/lib/tftpboot \
+		-v `pwd`/pxe:/pxe  \
+		-u `id -u`:`id -u` \
+		bikeos:pxe
+
+.PHONY:
+docker-pxe:
+	docker build --rm --network=host -t bikeos:pxe pxe/
+
 
 .PHONY: docker-vmdb2
 docker-vmdb2:
