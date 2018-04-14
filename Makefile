@@ -96,6 +96,22 @@ pxe: $(VOLTFTP)/tftpboot
 docker-pxe:
 	docker build --rm --network=host -t bikeos:pxe pxe/
 
+.PHONY:
+export-rpi3:
+	mkdir -p exports/root-rpi3
+	scripts/img_exportfs $(VOLRPI3)/rpi3.img p2 exports/root-rpi3
+
+.PHONY:
+diod-rootfs:
+	docker run --privileged --rm -i -t --net host \
+		-v `pwd`/exports:/exports \
+		-v `pwd`/diod:/diod \
+		-p 5640:5640 \
+		bikeos:diod
+
+.PHONY:
+docker-diod:
+	docker build --rm --network=host -t bikeos:diod diod/
 
 .PHONY: docker-vmdb2
 docker-vmdb2:
@@ -105,8 +121,9 @@ docker-vmdb2:
 build-kernel:
 	docker run --rm -t -i \
 		-v `pwd`/linux:/linux  \
+		-v `pwd`/kernel:/kernel \
 		-u `id -u`:`id -u` \
-		bikeos:kernel /build.sh
+		bikeos:kernel /kernel/build.sh
 
 .PHONY: docker-kernel
 docker-kernel:

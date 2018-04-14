@@ -1,0 +1,10 @@
+#!/bin/bash
+set -eou pipefail
+
+# mount a file into the export path
+# img_exportfs <img-file> <part> path
+
+loopdev=`sudo /sbin/losetup -f --show $1`
+name=`basename $loopdev`
+sudo kpartx -a $loopdev
+sudo mount /dev/mapper/${name}$2 $3
