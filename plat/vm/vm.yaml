@@ -76,6 +76,7 @@ steps:
     packages:
     - firmware-atheros
     - firmware-misc-nonfree
+    - firmware-realtek
     fs-tag: root-fs
     unless: rootfs_unpacked
 

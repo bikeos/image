@@ -67,6 +67,7 @@ steps:
     - firmware-brcm80211
     - firmware-atheros
     - firmware-misc-nonfree
+    - firmware-realtek
     - wireless-tools
     - wpasupplicant
     - raspi3-firmware
