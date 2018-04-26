@@ -1,0 +1,11 @@
+[Unit]
+Description=BikeOS opi0 platform
+After=syslog.target
+
+[Service]
+ExecStart=/bin/bash -c "echo 0 >/sys/bus/cpu/devices/cpu1/online && echo 0 >/sys/bus/cpu/devices/cpu3/online"
+Type=oneshot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=basic.target

@@ -1,0 +1,133 @@
+steps:
+  - mkimg: "{{ output }}"
+    size: 2048M 
+
+  - mklabel: msdos
+    device: "{{ output }}"
+
+  - mkpart: primary
+    fs-type: 'fat32'
+    device: "{{ output }}"
+    start: 0%
+    end: 64MiB
+    part-tag: boot-part
+  - mkpart: primary
+    device: "{{ output }}"
+    start: 64MiB
+    end: 1024MiB 
+    part-tag: root-part
+  - mkpart: primary
+    device: "{{ output }}"
+    start: 1024MIB 
+    end: 100%
+    part-tag: var-part
+
+  - mkfs: vfat
+    partition: boot-part
+  # TODO: this partition should be an efficient RO fs
+  - mkfs: ext4
+    partition: root-part
+  - mkfs: ext4
+    partition: var-part
+
+  - mount: root-part
+    fs-tag: root-fs
+
+  - mount: var-part
+    fs-tag: var-fs
+    mount-on: root-fs
+    dirname: '/var/'
+
+  - mount: boot-part
+    mount-on: root-fs
+    dirname: '/boot/'
+    fs-tag: boot-fs
+
+  - unpack-rootfs: root-fs
+  - qemu-debootstrap: buster
+    mirror: http://localhost:3142/debian
+    target: root-fs
+    arch: armhf
+    variant: minbase
+    components:
+    - main
+    - contrib
+    - non-free
+    unless: rootfs_unpacked
+
+  - chroot: root-fs
+    shell: |
+      echo 'deb http://localhost:3142/debian buster main contrib non-free' > /etc/apt/sources.list
+      apt-get update
+    unless: rootfs_unpacked
+
+  - apt: install
+    packages:
+    - dosfstools
+    - firmware-atheros
+    - firmware-misc-nonfree
+    - firmware-realtek
+    - wireless-tools
+    - wpasupplicant
+    - linux-image-armmp
+    - usbutils
+    - nano
+    - systemd
+    - iputils-ping
+    - net-tools
+    - curl
+    - nilfs-tools
+    - tcpdump
+    fs-tag: root-fs
+    unless: rootfs_unpacked
+
+  - cache-rootfs: root-fs
+    options: --exclude=/dev/
+    unless: rootfs_unpacked
+
+  - shell: |
+      echo "bikeos" > "${ROOT?}/etc/hostname"
+      # '..vpJrbBlNzG6' is crypt.crypt('bicycle', '..')
+      sed -i 's,root:[^:]*,root:..vpJrbBlNzG6,' "${ROOT?}/etc/shadow"
+      # configure filesystems
+      mkdir -p "${ROOT?}/media/sdcard"
+      install -m 644 -o root -g root /spec/fstab "${ROOT?}/etc/fstab"
+      install -m 644 -o root -g root /spec/boot.cmd "${ROOT?}/boot"
+      install -m 644 -o root -g root /spec/opi0.service "${ROOT?}/etc/systemd/system"
+      install -m 755 -o root -g root /bikeos/bin/bosd-arm "${ROOT?}/usr/sbin/bosd"
+      # alert bosd on wlan changes
+      install -m 644 -o root -g root /bikeos/95-wlan.rules "${ROOT?}/etc/udev/rules.d"
+      # daemon
+      install -m 644 -o root -g root /bikeos/bosd.service "${ROOT?}/etc/systemd/system"
+      install -m 644 -o root -g root /bikeos/etc/apparmor.d/local/usr.sbin.tcpdump "${ROOT?}/etc/apparmor.d/local/usr.sbin.tcpdump"
+      # time stuff
+      install -m 644 -o root -g root /bikeos/gps-time.service "${ROOT?}/etc/systemd/system"
+      mkdir -p "${ROOT?}/var/lib/systemd/timesync"
+      touch "${ROOT?}/var/lib/systemd/timesync/clock"
+      chown root:root "${ROOT?}/var/lib/systemd/timesync/clock"
+    root-fs: root-fs
+
+  - apt: install
+    packages:
+    - u-boot-tools
+    - u-boot-sunxi
+    fs-tag: root-fs
+
+# dd if=/usr/lib/u-boot/orangepi_zero/u-boot-sunxi-with-spl.bin of=/dev/sdX bs=1024 seek=8
+  - chroot: root-fs
+    shell: |
+      mkimage -C none -A arm -T script -d /boot/boot.cmd /boot/boot.scr
+      cp /usr/lib/u-boot/orangepi_zero/u-boot-sunxi-with-spl.bin /boot/
+      cp /usr/lib/linux-image-*-armmp/sun8i-h2-plus-orangepi-zero.dtb /boot/
+      mv /boot/vmlinuz-* /boot/zImage
+      mv /boot/initrd.img-* /boot/initrd.img
+      apt remove -y cgmanager gcc g++ binutils u-boot-sunxi
+      apt autoremove -y
+      rm /etc/resolv.conf
+      systemctl enable opi0
+      systemctl enable gps-time
+      systemctl enable bosd
+      systemctl disable apt-daily.timer
+      systemctl disable apt-daily.upgrade.timer
+      apt-get clean
+      rm -rf /var/lib/apt/lists

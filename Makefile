@@ -1,4 +1,5 @@
 VOLRPI3=volumes/rpi3
+VOLOPI0=volumes/opi0
 VOLVM=volumes/vm
 VOLAPTCACHE=volumes/apt-cache
 VOLTFTP=volumes/tftp
@@ -11,6 +12,9 @@ bikeos/bin/bosd-amd64:
 
 bikeos/bin/bosd-arm64:
 	GOARCH=arm64 go build -o $@ github.com/bikeos/bosd/cmd/bosd
+
+bikeos/bin/bosd-arm:
+	GOARCH=arm go build -o $@ github.com/bikeos/bosd/cmd/bosd
 
 $(VOLVM)/vm.img: bikeos/bin/bosd-amd64 plat/vm/vm.yaml
 	mkdir -p $(VOLVM)
@@ -60,6 +64,36 @@ $(VOLRPI3)/rpi3.img:bikeos/bin/bosd-arm64 plat/rpi3/rpi3.yaml
 		--rootfs-tarball /tmp/rpi3.tar.gz
 	mv $(VOLRPI3)/rpi3.img.tmp $(VOLRPI3)/rpi3.img
 
+.PHONY: opi0
+opi0: $(VOLOPI0)/opi0.img
+	mkdir -p exports/boot-opi0
+	scripts/img_exportfs $^ p1 exports/boot-opi0
+	dd of=$^ if=exports/boot-opi0/u-boot-sunxi-with-spl.bin bs=1024 seek=8 conv=notrunc
+	sudo umount exports/boot-opi0
+
+
+$(VOLOPI0)/opi0.img: bikeos/bin/bosd-arm plat/opi0/opi0.yaml plat/opi0/boot.cmd
+	mkdir -p $(VOLOPI0)
+	rm -f $(VOLOPI0)/opi0.img.tmp
+	touch $(VOLOPI0)/opi0.img.tmp
+	docker run --rm -i -t --privileged \
+		--net host \
+		-v /dev:/dev \
+		-v /dev/mapper:/dev/mapper \
+		-v /tmp:/tmp \
+		-v `pwd`/$(VOLOPI0):/$(VOLOPI0) \
+		-v `pwd`/plat/opi0:/spec	\
+		-v `pwd`/bikeos:/bikeos \
+		-w /$(VOLOPI0) \
+		bikeos:vmdb2 \
+		/vmdb2/vmdb2 \
+		/spec/opi0.yaml \
+		--verbose \
+		--output opi0.img.tmp \
+		--log opi0.log \
+		--rootfs-tarball /tmp/opi0.tar.gz
+	mv $(VOLOPI0)/opi0.img.tmp $(VOLOPI0)/opi0.img
+
 .PHONY: clean-dev
 clean-dev:
 	sudo dmsetup remove /dev/mapper/loop*
@@ -79,7 +113,6 @@ apt-cache:
 docker-apt-cache:
 	docker build -t bikeos:apt-cache cache/
 
-
 $(VOLTFTP)/tftpboot: $(VOLRPI3)/rpi3.img
 	mkdir -p $@
 	scripts/img_cp $(VOLRPI3)/rpi3.img  p1 "*" $@
@@ -97,6 +130,16 @@ docker-pxe:
 	docker build --rm --network=host -t bikeos:pxe pxe/
 
 .PHONY:
+export-root-opi0:
+	mkdir -p exports/root-opi0
+	scripts/img_exportfs $(VOLOPI0)/opi0.img p2 exports/root-opi0
+
+.PHONY:
+export-boot-opi0:
+	mkdir -p exports/boot-opi0
+	scripts/img_exportfs $(VOLOPI0)/opi0.img p1 exports/boot-opi0
+
+.PHONY:
 export-rpi3:
 	mkdir -p exports/root-rpi3
 	scripts/img_exportfs $(VOLRPI3)/rpi3.img p2 exports/root-rpi3
@@ -108,6 +151,10 @@ diod-rootfs:
 		-v `pwd`/diod:/diod \
 		-p 5640:5640 \
 		bikeos:diod
+
+.PHONY:
+rsync-opi0:
+	sudo rsync -r -c -l -v exports/root-opi0/ tgt
 
 .PHONY:
 docker-diod:
