@@ -71,7 +71,6 @@ steps:
     - wireless-tools
     - wpasupplicant
     - raspi3-firmware
-    - linux-image-arm64
     - usbutils
     - nano
     - systemd
@@ -80,6 +79,10 @@ steps:
     - curl
     - nilfs-tools
     - tcpdump
+    - alsa-utils
+    - mpg321
+    - flite
+    - linux-image-arm64
     fs-tag: root-fs
     unless: rootfs_unpacked
 
@@ -88,29 +91,13 @@ steps:
     unless: rootfs_unpacked
 
   - shell: |
-      echo "bikeos" > "${ROOT?}/etc/hostname"
-      # '..vpJrbBlNzG6' is crypt.crypt('bicycle', '..')
-      sed -i 's,root:[^:]*,root:..vpJrbBlNzG6,' "${ROOT?}/etc/shadow"
-      # configure filesystems
-      mkdir -p "${ROOT?}/media/sdcard"
-      install -m 644 -o root -g root /spec/fstab "${ROOT?}/etc/fstab"
-      install -m 755 -o root -g root /bikeos/bin/bosd-arm64 "${ROOT?}/usr/sbin/bosd"
-      # alert bosd on wlan changes
-      install -m 644 -o root -g root /bikeos/95-wlan.rules "${ROOT?}/etc/udev/rules.d"
+      /bikeos/install.sh arm64
       # configure network
       mkdir -p "${ROOT?}/etc/network/interfaces.d"
       install -m 644 -o root -g root /spec/eth0 "${ROOT?}/etc/network/interfaces.d/eth0"
       mkdir -p "${ROOT?}/etc/iptables"
       install -m 644 -o root -g root /spec/rules.v4 "${ROOT?}/etc/iptables/rules.v4"
       install -m 644 -o root -g root /spec/rules.v6 "${ROOT?}/etc/iptables/rules.v6"
-      # daemon
-      install -m 644 -o root -g root /bikeos/bosd.service "${ROOT?}/etc/systemd/system"
-      install -m 644 -o root -g root /bikeos/etc/apparmor.d/local/usr.sbin.tcpdump "${ROOT?}/etc/apparmor.d/local/usr.sbin.tcpdump"
-      # time stuff
-      install -m 644 -o root -g root /bikeos/gps-time.service "${ROOT?}/etc/systemd/system"
-      mkdir -p "${ROOT?}/var/lib/systemd/timesync"
-      touch "${ROOT?}/var/lib/systemd/timesync/clock"
-      chown root:root "${ROOT?}/var/lib/systemd/timesync/clock"
     root-fs: root-fs
 
   - chroot: root-fs

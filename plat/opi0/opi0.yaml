@@ -64,12 +64,8 @@ steps:
   - apt: install
     packages:
     - dosfstools
-    - firmware-atheros
-    - firmware-misc-nonfree
-    - firmware-realtek
     - wireless-tools
     - wpasupplicant
-    - linux-image-armmp
     - usbutils
     - nano
     - systemd
@@ -78,6 +74,13 @@ steps:
     - curl
     - nilfs-tools
     - tcpdump
+    - alsa-utils
+    - flite
+    - mpg321
+    - firmware-atheros
+    - firmware-misc-nonfree
+    - firmware-realtek
+    - linux-image-armmp
     fs-tag: root-fs
     unless: rootfs_unpacked
 
@@ -86,25 +89,9 @@ steps:
     unless: rootfs_unpacked
 
   - shell: |
-      echo "bikeos" > "${ROOT?}/etc/hostname"
-      # '..vpJrbBlNzG6' is crypt.crypt('bicycle', '..')
-      sed -i 's,root:[^:]*,root:..vpJrbBlNzG6,' "${ROOT?}/etc/shadow"
-      # configure filesystems
-      mkdir -p "${ROOT?}/media/sdcard"
-      install -m 644 -o root -g root /spec/fstab "${ROOT?}/etc/fstab"
+      /bikeos/install.sh arm
       install -m 644 -o root -g root /spec/boot.cmd "${ROOT?}/boot"
       install -m 644 -o root -g root /spec/opi0.service "${ROOT?}/etc/systemd/system"
-      install -m 755 -o root -g root /bikeos/bin/bosd-arm "${ROOT?}/usr/sbin/bosd"
-      # alert bosd on wlan changes
-      install -m 644 -o root -g root /bikeos/95-wlan.rules "${ROOT?}/etc/udev/rules.d"
-      # daemon
-      install -m 644 -o root -g root /bikeos/bosd.service "${ROOT?}/etc/systemd/system"
-      install -m 644 -o root -g root /bikeos/etc/apparmor.d/local/usr.sbin.tcpdump "${ROOT?}/etc/apparmor.d/local/usr.sbin.tcpdump"
-      # time stuff
-      install -m 644 -o root -g root /bikeos/gps-time.service "${ROOT?}/etc/systemd/system"
-      mkdir -p "${ROOT?}/var/lib/systemd/timesync"
-      touch "${ROOT?}/var/lib/systemd/timesync/clock"
-      chown root:root "${ROOT?}/var/lib/systemd/timesync/clock"
     root-fs: root-fs
 
   - apt: install

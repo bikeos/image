@@ -192,11 +192,12 @@ QEMUCMD=qemu-system-x86_64 -enable-kvm -rtc base=1990-01-01,clock=vm -net none
 qemu-vm: vm
 	$(QEMUCMD)	-hda $(VOLVM)/vm.img -smp 2 -m 512 \
 			-usb -device usb-ehci,id=ehci \
-			$(shell lsusb | egrep "(Ralink|Realtek|IMC)" | \
+ -net user,vlan=0 -net nic \
+			$(shell lsusb | egrep "(Ralink|Realtek|IMC|Atheros)" | \
 					cut -f1 -d: | \
 					awk '{ print "-device usb-host,hostbus="$$2",hostaddr="$$4",bus=ehci.0" } ' | \
 					sed 's/=0*/=/g') \
-			$(shell lsusb | egrep "(U-Blox)" | \
+			$(shell lsusb | egrep "(U-Blox|Generalplus|8086:0808)" | \
 					cut -f1 -d: | \
 					awk '{ print "-device usb-host,hostbus="$$2",hostaddr="$$4",bus=usb-bus.0" } ' | \
 					sed 's/=0*/=/g')
