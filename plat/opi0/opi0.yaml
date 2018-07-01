@@ -81,6 +81,7 @@ steps:
     - firmware-misc-nonfree
     - firmware-realtek
     - linux-image-armmp
+    options: --no-install-recommends --no-install-suggests
     fs-tag: root-fs
     unless: rootfs_unpacked
 

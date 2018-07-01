@@ -48,11 +48,17 @@ steps:
     - non-free
     unless: rootfs_unpacked
 
+  - chroot: root-fs
+    shell: |
+      echo 'deb http://localhost:3142/debian buster main contrib non-free' > /etc/apt/sources.list
+      apt-get update
+    unless: rootfs_unpacked
+
   - apt: install
     packages:
     - linux-image-amd64
     - nilfs-tools
-    - dhcpcd5
+    - pump
     - tcpdump
     - wireless-tools
     - wpasupplicant
@@ -65,13 +71,8 @@ steps:
     - alsa-utils
     - flite
     - mpg321
+    options: --no-install-recommends --no-install-suggests
     fs-tag: root-fs
-    unless: rootfs_unpacked
-
-  - chroot: root-fs
-    shell: |
-      echo 'deb http://localhost:3142/debian buster main contrib non-free' > /etc/apt/sources.list
-      apt-get update
     unless: rootfs_unpacked
 
   # needs apt-get update to fetch these

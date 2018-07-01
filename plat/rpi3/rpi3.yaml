@@ -83,6 +83,7 @@ steps:
     - mpg321
     - flite
     - linux-image-arm64
+    options: --no-install-recommends --no-install-suggests
     fs-tag: root-fs
     unless: rootfs_unpacked
 
