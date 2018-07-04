@@ -97,6 +97,7 @@ steps:
 
   - apt: install
     packages:
+    - systemd-sysv
     - u-boot-tools
     - u-boot-sunxi
     fs-tag: root-fs

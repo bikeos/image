@@ -57,6 +57,9 @@ steps:
   - apt: install
     packages:
     - linux-image-amd64
+    - firmware-atheros
+    - firmware-misc-nonfree
+    - firmware-realtek
     - nilfs-tools
     - pump
     - tcpdump
@@ -75,14 +78,6 @@ steps:
     fs-tag: root-fs
     unless: rootfs_unpacked
 
-  # needs apt-get update to fetch these
-  - apt: install
-    packages:
-    - firmware-atheros
-    - firmware-misc-nonfree
-    - firmware-realtek
-    fs-tag: root-fs
-    unless: rootfs_unpacked
 
   - cache-rootfs: root-fs
     options: --exclude=/dev/
