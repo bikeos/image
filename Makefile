@@ -1,11 +1,17 @@
+PLATS=vm opi0 rpi3
+
 VOLRPI3=volumes/rpi3
 VOLOPI0=volumes/opi0
 VOLVM=volumes/vm
+
 VOLAPTCACHE=volumes/apt-cache
 VOLTFTP=volumes/tftp
 
+VOLS=$(VOLRPI3) $(VOLOPI0) $(VOLVM)
+VOLIMGS=$(VOLS:=/bikeos.img)
+
 .PHONY: vm
-vm: $(VOLVM)/vm.img
+vm: $(VOLVM)/bikeos.img
 
 bikeos/bin/bosd-amd64:
 	go build -o $@ github.com/bikeos/bosd/cmd/bosd
@@ -16,10 +22,10 @@ bikeos/bin/bosd-arm64:
 bikeos/bin/bosd-arm:
 	GOARCH=arm go build -o $@ github.com/bikeos/bosd/cmd/bosd
 
-$(VOLVM)/vm.img: bikeos/bin/bosd-amd64 plat/vm/vm.yaml
+$(VOLVM)/bikeos.img: bikeos/bin/bosd-amd64 plat/vm/vm.yaml
 	mkdir -p $(VOLVM)
-	rm -f $(VOLVM)/vm.img.tmp
-	touch $(VOLVM)/vm.img.tmp
+	rm -f $(VOLVM)/bikeos.img.tmp
+	touch $(VOLVM)/bikeos.img.tmp
 	docker run --rm -i -t --privileged \
 		--net host \
 		-v /dev:/dev \
@@ -34,18 +40,18 @@ $(VOLVM)/vm.img: bikeos/bin/bosd-amd64 plat/vm/vm.yaml
 		/vmdb2/vmdb2 \
 		/spec/vm.yaml \
 		--verbose \
-		--output vm.img.tmp \
+		--output bikeos.img.tmp \
 		--log vm.log \
 		--rootfs-tarball /tmp/vm.tar.gz"
-	mv $(VOLVM)/vm.img.tmp $(VOLVM)/vm.img
+	mv $(VOLVM)/bikeos.img.tmp $(VOLVM)/bikeos.img
 
 .PHONY: rpi3
-rpi3: $(VOLRPI3)/rpi3.img
+rpi3: $(VOLRPI3)/bikeos.img
 
-$(VOLRPI3)/rpi3.img:bikeos/bin/bosd-arm64 plat/rpi3/rpi3.yaml
+$(VOLRPI3)/bikeos.img:bikeos/bin/bosd-arm64 plat/rpi3/rpi3.yaml
 	mkdir -p $(VOLRPI3)
-	rm -f $(VOLRPI3)/rpi3.img.tmp
-	touch $(VOLRPI3)/rpi3.img.tmp
+	rm -f $(VOLRPI3)/bikeos.img.tmp
+	touch $(VOLRPI3)/bikeos.img.tmp
 	docker run --rm -i -t --privileged \
 		--net host \
 		-v /dev:/dev \
@@ -59,23 +65,23 @@ $(VOLRPI3)/rpi3.img:bikeos/bin/bosd-arm64 plat/rpi3/rpi3.yaml
 		/vmdb2/vmdb2 \
 		/spec/rpi3.yaml \
 		--verbose \
-		--output rpi3.img.tmp \
+		--output bikeos.img.tmp \
 		--log rpi3.log \
 		--rootfs-tarball /tmp/rpi3.tar.gz
-	mv $(VOLRPI3)/rpi3.img.tmp $(VOLRPI3)/rpi3.img
+	mv $(VOLRPI3)/bikeos.img.tmp $(VOLRPI3)/bikeos.img
 
 .PHONY: opi0
-opi0: $(VOLOPI0)/opi0.img
+opi0: $(VOLOPI0)/bikeos.img
 	mkdir -p exports/boot-opi0
 	scripts/img_exportfs $^ p1 exports/boot-opi0
 	dd of=$^ if=exports/boot-opi0/u-boot-sunxi-with-spl.bin bs=1024 seek=8 conv=notrunc
 	sudo umount exports/boot-opi0
 
 
-$(VOLOPI0)/opi0.img: bikeos/bin/bosd-arm plat/opi0/opi0.yaml plat/opi0/boot.cmd
+$(VOLOPI0)/bikeos.img: bikeos/bin/bosd-arm plat/opi0/opi0.yaml plat/opi0/boot.cmd
 	mkdir -p $(VOLOPI0)
-	rm -f $(VOLOPI0)/opi0.img.tmp
-	touch $(VOLOPI0)/opi0.img.tmp
+	rm -f $(VOLOPI0)/bikeos.img.tmp
+	touch $(VOLOPI0)/bikeos.img.tmp
 	docker run --rm -i -t --privileged \
 		--net host \
 		-v /dev:/dev \
@@ -89,10 +95,10 @@ $(VOLOPI0)/opi0.img: bikeos/bin/bosd-arm plat/opi0/opi0.yaml plat/opi0/boot.cmd
 		/vmdb2/vmdb2 \
 		/spec/opi0.yaml \
 		--verbose \
-		--output opi0.img.tmp \
+		--output bikeos.img.tmp \
 		--log opi0.log \
 		--rootfs-tarball /tmp/opi0.tar.gz
-	mv $(VOLOPI0)/opi0.img.tmp $(VOLOPI0)/opi0.img
+	mv $(VOLOPI0)/bikeos.img.tmp $(VOLOPI0)/bikeos.img
 
 .PHONY: clean-dev
 clean-dev:
@@ -112,9 +118,9 @@ apt-cache:
 docker-apt-cache:
 	docker build -t bikeos:apt-cache cache/
 
-$(VOLTFTP)/tftpboot: $(VOLRPI3)/rpi3.img
+$(VOLTFTP)/tftpboot: $(VOLRPI3)/bikeos.img
 	mkdir -p $@
-	scripts/img_cp $(VOLRPI3)/rpi3.img  p1 "*" $@
+	scripts/img_cp $(VOLRPI3)/bikeos.img  p1 "*" $@
 
 .PHONY: pxe
 pxe: $(VOLTFTP)/tftpboot
@@ -124,24 +130,24 @@ pxe: $(VOLTFTP)/tftpboot
 		-u `id -u`:`id -u` \
 		bikeos:pxe
 
-.PHONY:
+.PHONY: docker-pxe
 docker-pxe:
 	docker build --rm --network=host -t bikeos:pxe pxe/
 
 .PHONY:
 export-root-opi0:
 	mkdir -p exports/root-opi0
-	scripts/img_exportfs $(VOLOPI0)/opi0.img p2 exports/root-opi0
+	scripts/img_exportfs $(VOLOPI0)/bikeos.img p2 exports/root-opi0
 
 .PHONY:
 export-boot-opi0:
 	mkdir -p exports/boot-opi0
-	scripts/img_exportfs $(VOLOPI0)/opi0.img p1 exports/boot-opi0
+	scripts/img_exportfs $(VOLOPI0)/bikeos.img p1 exports/boot-opi0
 
 .PHONY:
 export-rpi3:
 	mkdir -p exports/root-rpi3
-	scripts/img_exportfs $(VOLRPI3)/rpi3.img p2 exports/root-rpi3
+	scripts/img_exportfs $(VOLRPI3)/bikeos.img p2 exports/root-rpi3
 
 .PHONY:
 diod-rootfs:
@@ -189,7 +195,7 @@ binfmts:
 QEMUCMD=qemu-system-x86_64 -enable-kvm -rtc base=1990-01-01,clock=vm -net none
 .PHONY: qemu-vm
 qemu-vm: vm
-	$(QEMUCMD)	-hda $(VOLVM)/vm.img -smp 2 -m 512 \
+	$(QEMUCMD)	-hda $(VOLVM)/bikeos.img -smp 2 -m 512 \
 			-usb \
 			-netdev user,id=net0 -device e1000,netdev=net0,mac=52:54:00:12:34:50 \
 			-device usb-ehci,id=ehci \
