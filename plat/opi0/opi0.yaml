@@ -9,11 +9,11 @@ steps:
     fs-type: 'fat32'
     device: "{{ output }}"
     start: 0%
-    end: 64MiB
+    end: 128MiB
     part-tag: boot-part
   - mkpart: primary
     device: "{{ output }}"
-    start: 64MiB
+    start: 128MiB
     end: 1024MiB 
     part-tag: root-part
   - mkpart: primary
