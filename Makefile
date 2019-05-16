@@ -187,6 +187,7 @@ binfmts:
 	sudo mount -t binfmt_misc none /proc/sys/fs/binfmt_misc || true
 	docker run --rm -i -t bikeos:vmdb2 update-binfmts --display
 	docker run --rm -i -t --privileged bikeos:vmdb2 update-binfmts --enable qemu-aarch64
+	docker run --rm -i -t --privileged bikeos:vmdb2 update-binfmts --enable qemu-arm
 
 
 # TODO: ncurses/console mode
