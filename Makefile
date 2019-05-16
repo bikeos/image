@@ -105,7 +105,6 @@ apt-cache:
 	docker run --rm -i -t \
 		-v `pwd`/$(VOLAPTCACHE)/cache:/var/cache/apt-cacher-ng/ \
 		-v `pwd`/$(VOLAPTCACHE)/log:/var/log/apt-cacher-ng/ \
-		-u `id -u`:`id -u` \
 		-p 3142:3142 \
 		bikeos:apt-cache
 
@@ -191,8 +190,9 @@ QEMUCMD=qemu-system-x86_64 -enable-kvm -rtc base=1990-01-01,clock=vm -net none
 .PHONY: qemu-vm
 qemu-vm: vm
 	$(QEMUCMD)	-hda $(VOLVM)/vm.img -smp 2 -m 512 \
-			-usb -device usb-ehci,id=ehci \
- -net user,vlan=0 -net nic \
+			-usb \
+			-netdev user,id=net0 -device e1000,netdev=net0,mac=52:54:00:12:34:50 \
+			-device usb-ehci,id=ehci \
 			$(shell lsusb | egrep "(Ralink|Realtek|IMC|Atheros)" | \
 					cut -f1 -d: | \
 					awk '{ print "-device usb-host,hostbus="$$2",hostaddr="$$4",bus=ehci.0" } ' | \
