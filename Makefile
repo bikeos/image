@@ -9,6 +9,8 @@ VOLTFTP=volumes/tftp
 
 VOLS=$(VOLRPI3) $(VOLOPI0) $(VOLVM)
 VOLIMGS=$(VOLS:=/bikeos.img)
+VOLIMGSGZ=$(VOLIMGS:=.gz)
+VOLIMGSTOR=$(VOLIMGSGZ:=.torrent)
 
 .PHONY: vm
 vm: $(VOLVM)/bikeos.img
@@ -43,7 +45,7 @@ $(VOLVM)/bikeos.img: bikeos/bin/bosd-amd64 plat/vm/vm.yaml
 		--output bikeos.img.tmp \
 		--log vm.log \
 		--rootfs-tarball /tmp/vm.tar.gz"
-	mv $(VOLVM)/bikeos.img.tmp $(VOLVM)/bikeos.img
+	mv $(VOLVM)/bikeos.img.tmp $@
 
 .PHONY: rpi3
 rpi3: $(VOLRPI3)/bikeos.img
@@ -68,7 +70,7 @@ $(VOLRPI3)/bikeos.img:bikeos/bin/bosd-arm64 plat/rpi3/rpi3.yaml
 		--output bikeos.img.tmp \
 		--log rpi3.log \
 		--rootfs-tarball /tmp/rpi3.tar.gz
-	mv $(VOLRPI3)/bikeos.img.tmp $(VOLRPI3)/bikeos.img
+	mv $(VOLRPI3)/bikeos.img.tmp $@
 
 .PHONY: opi0
 opi0: $(VOLOPI0)/bikeos.img
@@ -133,6 +135,27 @@ pxe: $(VOLTFTP)/tftpboot
 .PHONY: docker-pxe
 docker-pxe:
 	docker build --rm --network=host -t bikeos:pxe pxe/
+
+# remember to seed with external client
+.PHONY: tracker
+tracker: torrents
+	docker run -v `pwd`/volumes:/vols --rm --net host -t bikeos:tracker
+
+torrents: $(VOLIMGSTOR)
+
+%.img.gz: %.img
+	pigz -c -f -9 $< >$@
+
+%.img.gz.torrent: %.img.gz
+	rm -f $@
+	docker run --rm -v `pwd`/$(basename $(dir $<)):/vol	\
+		-w /vol/	\
+		-t bikeos:tracker /bin/bash -c \
+		"/usr/bin/ctorrent -t -s `basename $@` -u http://bikeos.org:6969/announce `basename $<`"
+
+.PHONY: docker-tracker
+docker-tracker:
+	docker build --rm --network=host -t bikeos:tracker torrent/
 
 .PHONY:
 export-root-opi0:
