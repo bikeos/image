@@ -157,22 +157,27 @@ torrents: $(VOLIMGSTOR)
 docker-tracker:
 	docker build --rm --network=host -t bikeos:tracker torrent/
 
-.PHONY:
+.PHONY: export-root-opi0
 export-root-opi0:
 	mkdir -p exports/root-opi0
 	scripts/img_exportfs $(VOLOPI0)/bikeos.img p2 exports/root-opi0
 
-.PHONY:
+.PHONY: export-boot-opi0
 export-boot-opi0:
 	mkdir -p exports/boot-opi0
 	scripts/img_exportfs $(VOLOPI0)/bikeos.img p1 exports/boot-opi0
 
-.PHONY:
+.PHONY: export-rpi3
 export-rpi3:
 	mkdir -p exports/root-rpi3
 	scripts/img_exportfs $(VOLRPI3)/bikeos.img p2 exports/root-rpi3
 
-.PHONY:
+.PHONY: export-sdcard-vm
+export-sdcard-vm:
+	mkdir -p exports/sdcard-vm
+	scripts/img_exportfs $(VOLVM)/bikeos.img p3 exports/sdcard-vm
+
+.PHONY: diod-rootfs
 diod-rootfs:
 	docker run --privileged --rm -i -t --net host \
 		-v `pwd`/exports:/exports \
@@ -180,11 +185,11 @@ diod-rootfs:
 		-p 5640:5640 \
 		bikeos:diod
 
-.PHONY:
+.PHONY: rsync-opi0
 rsync-opi0:
 	sudo rsync -r -c -l -v exports/root-opi0/ tgt
 
-.PHONY:
+.PHONY: docker-diod
 docker-diod:
 	docker build --rm --network=host -t bikeos:diod diod/
 
@@ -213,6 +218,12 @@ binfmts:
 	docker run --rm -i -t --privileged bikeos:vmdb2 update-binfmts --enable qemu-arm
 
 
+.PHONY: update-bosd-vm
+update-bosd-vm: export-sdcard-vm
+	sudo cp bikeos/bin/bosd-amd64 exports/sdcard-vm/
+	sudo umount exports/sdcard-vm
+
+
 # TODO: ncurses/console mode
 # auto-detects some usb-peripherals, overrides clock for gps testing
 # -net user,vlan=0 -net nic
@@ -220,14 +231,14 @@ QEMUCMD=qemu-system-x86_64 -enable-kvm -rtc base=1990-01-01,clock=vm -net none
 .PHONY: qemu-vm
 qemu-vm: vm
 	$(QEMUCMD)	-hda $(VOLVM)/bikeos.img -smp 2 -m 512 \
-			-usb \
 			-netdev user,id=net0 -device e1000,netdev=net0,mac=52:54:00:12:34:50 \
+			-usb \
 			-device usb-ehci,id=ehci \
 			$(shell lsusb | egrep "(Ralink|Realtek|IMC|Atheros)" | \
 					cut -f1 -d: | \
 					awk '{ print "-device usb-host,hostbus="$$2",hostaddr="$$4",bus=ehci.0" } ' | \
 					sed 's/=0*/=/g') \
-			$(shell lsusb | egrep "(U-Blox|Generalplus|8086:0808)" | \
+			$(shell lsusb | egrep "(U-Blox|Generalplus|8086:0808|Personal)" | \
 					cut -f1 -d: | \
 					awk '{ print "-device usb-host,hostbus="$$2",hostaddr="$$4",bus=usb-bus.0" } ' | \
 					sed 's/=0*/=/g')
